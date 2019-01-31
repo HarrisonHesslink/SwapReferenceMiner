@@ -154,62 +154,6 @@ namespace Mozkomor.GrinGoldMinerCLI
 
                 string pool = "";
                 string port = "13416";
-                Console.WriteLine($"Select minig pool (press number):");
-                Console.WriteLine($"[1] Custom stratum address");
-                Console.WriteLine($"[2] US-east grinmint.com");
-                Console.WriteLine($"[3] EU-west grinmint.com");
-                Console.WriteLine($"[4] mwgrinpool.com (open-source)");
-                Console.WriteLine($"[5] EU grin-pool.org");
-                Console.WriteLine("Or try some other pools (use option 1): cuckoomine.org grinpool.co sparkpool.com ");
-                var key = Console.ReadLine();
-
-                if (key == "2" || key == "3")
-                {
-                    generated_config.PrimaryConnection.ConnectionAddress = key == "2" ? "us-east-stratum.grinmint.com" : "eu-west-stratum.grinmint.com";
-                    generated_config.PrimaryConnection.ConnectionPort = 4416;
-                    generated_config.PrimaryConnection.Ssl = true;
-                    Console.WriteLine($"Enter your email (pool login):");
-                    var email = Console.ReadLine();
-                   
-                    if (email.Contains("/"))
-                    {
-                        generated_config.PrimaryConnection.Login = email;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Enter your rig name (e.g. rig1):");
-                        var rig = Console.ReadLine();
-                        if (string.IsNullOrWhiteSpace(rig)) rig = "rig1";
-                        generated_config.PrimaryConnection.Login = $"{email}/{rig}";
-                    }
-
-                    Console.WriteLine($"Enter your pool password:");
-                    generated_config.PrimaryConnection.Password = Console.ReadLine();
-                }
-                else if (key == "4")
-                {
-                    generated_config.PrimaryConnection.ConnectionAddress = "stratum.MWGrinPool.com";
-                    generated_config.PrimaryConnection.ConnectionPort = 3334;
-                    generated_config.PrimaryConnection.Ssl = true;
-                    Console.WriteLine($"Enter your email (pool login):");
-                    var email = Console.ReadLine();
-                    generated_config.PrimaryConnection.Login = $"{email}";
-                    Console.WriteLine($"Enter your pool password:");
-                    generated_config.PrimaryConnection.Password = Console.ReadLine();
-                }
-                else if (key == "5")
-                {
-                    Console.WriteLine("You need to create account on grin-pool.org website first and then enter you login here.");
-                    generated_config.PrimaryConnection.ConnectionAddress = "eu.stratum.grin-pool.org";
-                    generated_config.PrimaryConnection.ConnectionPort = 3416;
-                    generated_config.PrimaryConnection.Ssl = false;
-                    Console.WriteLine($"Enter your login:");
-                    var email = Console.ReadLine();
-                    generated_config.PrimaryConnection.Login = $"{email}";
-                    Console.WriteLine($"Enter your rig name (or leave empty):");
-                    generated_config.PrimaryConnection.Password = Console.ReadLine();
-                }
-                else
                 {
 
                     Console.WriteLine($"Enter your mining pool stratum address:");
@@ -368,7 +312,7 @@ namespace Mozkomor.GrinGoldMinerCLI
                             string who = ConnectionManager.IsInFee() ? "FEE" : (conn?.login ?? "USER");
                             who = who.Length > 10 ? who.Substring(0, 10)+".." : who;
 
-                            Console.WriteLine("Grin Gold Miner 2.8 - Dreaming in cycles");
+                            Console.WriteLine("Swap Reference Miner 0.1 - based on Grin Gold Miner 2.8 - Dreaming in cycles");
                             Console.WriteLine("------------------------------------------------------------------------------------------");
                             WipeLine();
                             Console.Write("Mining for: ");
