@@ -277,7 +277,7 @@ extern "C" {
 			{
 				const int index = (bktInSize * group) + lindex;
 
-				uint2 edge = __ldg(&source[index]);
+				uint2 edge = source[index];
 
 				if (edge.x == 0 && edge.y == 0) continue;
 
@@ -309,100 +309,6 @@ extern "C" {
 		}
 
 	}
-	__global__  void FluffyRound_J(const uint2 * sourceA, const uint2 * sourceB, uint2 * destination, const int * sourceIndexes, int * destinationIndexes, const int bktInSize, const int bktOutSize)
-	{
-		const int lid = threadIdx.x;
-		const int group = blockIdx.x;
-
-		__shared__ u32 ecounters[8192];
-
-		const int edgesInBucketA = min(sourceIndexes[group], bktInSize);
-		const int edgesInBucketB = min(sourceIndexes[group + 4096], bktInSize);
-
-		const int loopsA = (edgesInBucketA + CTHREADS) / CTHREADS;
-		const int loopsB = (edgesInBucketB + CTHREADS) / CTHREADS;
-
-		for (int i = 0; i < 16; i++)
-			ecounters[lid + (512 * i)] = 0;
-
-		__syncthreads();
-
-		for (int i = 0; i < loopsA; i++)
-		{
-			const int lindex = (i * CTHREADS) + lid;
-
-			if (lindex < edgesInBucketA)
-			{
-				const int index = (bktInSize * group) + lindex;
-
-				uint2 edge = sourceA[index];
-
-				if (edge.x == 0 && edge.y == 0) continue;
-
-				Increase2bCounter(ecounters, (edge.x & EDGEMASK) >> 12);
-			}
-		}
-		for (int i = 0; i < loopsB; i++)
-		{
-			const int lindex = (i * CTHREADS) + lid;
-
-			if (lindex < edgesInBucketB)
-			{
-				const int index = (bktInSize * group) + lindex;
-
-				uint2 edge = sourceB[index];
-
-				if (edge.x == 0 && edge.y == 0) continue;
-
-				Increase2bCounter(ecounters, (edge.x & EDGEMASK) >> 12);
-			}
-		}
-
-		__syncthreads();
-
-		for (int i = 0; i < loopsA; i++)
-		{
-			const int lindex = (i * CTHREADS) + lid;
-
-			if (lindex < edgesInBucketA)
-			{
-				const int index = (bktInSize * group) + lindex;
-
-				uint2 edge = sourceA[index];
-
-				if (edge.x == 0 && edge.y == 0) continue;
-
-				if (Read2bCounter(ecounters, (edge.x & EDGEMASK) >> 12))
-				{
-					const int bucket = edge.y & BKTMASK4K;
-					const int bktIdx = min(atomicAdd(destinationIndexes + bucket, 1), bktOutSize - 1);
-					destination[(bucket * bktOutSize) + bktIdx] = make_uint2(edge.y, edge.x);
-				}
-			}
-		}
-		for (int i = 0; i < loopsB; i++)
-		{
-			const int lindex = (i * CTHREADS) + lid;
-
-			if (lindex < edgesInBucketB)
-			{
-				const int index = (bktInSize * group) + lindex;
-
-				uint2 edge = sourceB[index];
-
-				if (edge.x == 0 && edge.y == 0) continue;
-
-				if (Read2bCounter(ecounters, (edge.x & EDGEMASK) >> 12))
-				{
-					const int bucket = edge.y & BKTMASK4K;
-					const int bktIdx = min(atomicAdd(destinationIndexes + bucket, 1), bktOutSize - 1);
-					destination[(bucket * bktOutSize) + bktIdx] = make_uint2(edge.y, edge.x);
-				}
-			}
-		}
-
-	}
-
 	__global__  void FluffyTail(const uint2 * source, uint2 * destination, const int * sourceIndexes, int * destinationIndexes)
 	{
 		const int lid = threadIdx.x;
@@ -486,6 +392,5 @@ extern "C" {
 		}
 	}
 
-	
 }
 
