@@ -242,7 +242,7 @@ namespace OclSolver
                                         bufferI1 = context.CreateBuffer<uint>(MemoryFlag.ReadWrite, INDEX_SIZE);
                                         bufferI2 = context.CreateBuffer<uint>(MemoryFlag.ReadWrite, INDEX_SIZE);
 
-                                        bufferR = context.CreateBuffer<uint>(MemoryFlag.ReadOnly, 42*2);
+                                        bufferR = context.CreateBuffer<uint>(MemoryFlag.ReadOnly, 32*2);
                                     }
                                     catch (Exception ex)
                                     {
@@ -367,7 +367,7 @@ namespace OclSolver
                                                     commandQueue.EnqueueWriteBufferEdges(bufferR, s.GetLongEdges());
                                                     commandQueue.EnqueueClearBuffer(bufferI2, 64 * 64 * 4, clearPattern);
                                                     commandQueue.EnqueueNDRangeKernel(kernelRecovery, 1, 2048 * 256, 256, 0);
-                                                    s.nonces = commandQueue.EnqueueReadBuffer<uint>(bufferI2, 42);
+                                                    s.nonces = commandQueue.EnqueueReadBuffer<uint>(bufferI2, 32);
                                                     OpenCl.DotNetCore.Interop.CommandQueues.CommandQueuesNativeApi.Finish(commandQueue.Handle);
                                                     s.nonces = s.nonces.OrderBy(n => n).ToArray();
                                                     Comms.graphSolutionsOut.Enqueue(s);

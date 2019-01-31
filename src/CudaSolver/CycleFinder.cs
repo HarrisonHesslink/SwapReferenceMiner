@@ -36,7 +36,7 @@ namespace CudaSolver
             job = jobToSolve;
         }
 
-        internal void FindSolutions(ConcurrentQueue<Solution> solutions, int cyclen = 42)
+        internal void FindSolutions(ConcurrentQueue<Solution> solutions, int cyclen = 32)
         {
             for (int ee = 0; ee < edges.Length/2; ee++)
             {
@@ -91,14 +91,14 @@ namespace CudaSolver
                             if (ShowCycles)
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine("42-cycle found!");
+                                Console.WriteLine("32-cycle found!");
                                 // initiate nonce recovery procedure
                                 Console.ResetColor();
                             }
 
                             List<uint> path1t = path1.Take((int)joinA + 1).ToList();
                             List<uint> path2t = path2.Take((int)joinB + 1).ToList();
-                            List<Edge> cycleEdges = new List<Edge>(42);
+                            List<Edge> cycleEdges = new List<Edge>(32);
                             cycleEdges.Add(e);
 
                             cycleEdges.AddRange(path1t.Zip(path1t.Skip(1), (second, first) => new Edge(first, second)));

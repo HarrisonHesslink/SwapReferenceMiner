@@ -110,8 +110,8 @@ namespace SharedSerialization
         {
             try
             {
-                BitArray packed = new BitArray(42 * 29);
-                byte[] packedSolution = new byte[153]; // 42*proof_size/8 padded
+                BitArray packed = new BitArray(32 * 29);
+                byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
                 int position = 0;
                 foreach (var n in nonces)
                 {
@@ -142,8 +142,8 @@ namespace SharedSerialization
         //{
         //    try
         //    {
-        //        BitArray packed = new BitArray(42 * 29);
-        //        byte[] packedSolution = new byte[153]; // 42*proof_size/8 padded
+        //        BitArray packed = new BitArray(32 * 29);
+        //        byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
         //        int position = 0;
         //        foreach (var n in nonces)
         //        {

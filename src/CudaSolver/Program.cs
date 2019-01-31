@@ -302,8 +302,8 @@ namespace CudaSolver
                         d_indexesB.MemsetAsync(0, streamPrimary.Stream);
                         meanRecover.RunAsync(streamPrimary.Stream, s.job.k0, s.job.k1, s.job.k2, s.job.k3, d_indexesB.DevicePointer);
                         streamPrimary.Synchronize();
-                        s.nonces = new uint[42];
-                        d_indexesB.CopyToHost(s.nonces, 0, 0, 42 * 4);
+                        s.nonces = new uint[32];
+                        d_indexesB.CopyToHost(s.nonces, 0, 0, 32 * 4);
                         s.nonces = s.nonces.OrderBy(n => n).ToArray();
                         lock (Comms.graphSolutionsOut)
                         {

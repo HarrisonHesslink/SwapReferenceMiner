@@ -116,13 +116,13 @@ namespace OpenCl.DotNetCore.CommandQueues
         public void EnqueueWriteBufferEdges(MemoryObject memoryObject, long[] edges)
         {
             IntPtr waitEventPointer = IntPtr.Zero;
-            IntPtr edgesPtr = Marshal.AllocHGlobal(8 * 42);
+            IntPtr edgesPtr = Marshal.AllocHGlobal(8 * 32);
 
             try
             {
-                Marshal.Copy(edges, 0, edgesPtr, 42);
+                Marshal.Copy(edges, 0, edgesPtr, 32);
 
-                Result result = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(this.Handle, memoryObject.Handle, 1, new UIntPtr((uint)0), new UIntPtr((uint)42*8), edgesPtr, 0, null, waitEventPointer);
+                Result result = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(this.Handle, memoryObject.Handle, 1, new UIntPtr((uint)0), new UIntPtr((uint)32*8), edgesPtr, 0, null, waitEventPointer);
 
                 // Checks if the read operation was queued successfuly, if not, an exception is thrown
                 if (result != Result.Success)
