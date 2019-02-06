@@ -412,7 +412,7 @@ namespace OclSolver
 
                                                 edgesCount = commandQueue.EnqueueReadBuffer<uint>(bufferI2, 1);
                                                 edgesCount[0] = edgesCount[0] > 1000000 ? 1000000 : edgesCount[0];
-                                                edgesLeft = commandQueue.EnqueueReadBuffer(bufferA1, (int)edgesCount[0] * 2);
+                                                edgesLeft = commandQueue.EnqueueReadBufferUnsafe(bufferA1, (int)edgesCount[0] * 2);
 
                                                 OpenCl.DotNetCore.Interop.CommandQueues.CommandQueuesNativeApi.Flush(commandQueue.Handle);
                                                 OpenCl.DotNetCore.Interop.CommandQueues.CommandQueuesNativeApi.Finish(commandQueue.Handle);
@@ -424,7 +424,7 @@ namespace OclSolver
 
                                                 Logger.Log(LogLevel.Info, string.Format("GPU AMD{2}:    Trimmed in {0}ms to {1} edges", sw.ElapsedMilliseconds, edgesCount[0], deviceID));
 
-                                                CGraph cg = new CGraph();
+                                                CGraph cg = FinderBag.GetFinder();
                                                 cg.SetEdges(edgesLeft, (int)edgesCount[0]);
                                                 cg.SetHeader(currentJob);
 
@@ -456,6 +456,7 @@ namespace OclSolver
                                                                 {
                                                                     solutions++;
                                                                 }
+                                                                
                                                             }
                                                             else
                                                                 Logger.Log(LogLevel.Warning, "CPU overloaded!");
@@ -467,6 +468,7 @@ namespace OclSolver
                                                         finally
                                                         {
                                                             findersInFlight--;
+                                                            FinderBag.ReturnFinder(cg);
                                                         }
                                                     }
                                                 });
