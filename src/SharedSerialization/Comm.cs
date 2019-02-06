@@ -28,8 +28,8 @@ namespace SharedSerialization
 
         public DateTime timestamp;
         public DateTime solvedAt;
-        public UInt64 nonce, height, difficulty, jobID, scale;
-        public UInt64 hnonce;
+        public UInt64 height, difficulty, jobID, scale;
+        public UInt32 hnonce, nonce;
         public UInt64 k0;
         public UInt64 k1;
         public UInt64 k2;
@@ -44,7 +44,7 @@ namespace SharedSerialization
         {
             graphAttempts++;
             var header = GetHeaderBytes();
-            nonce = hnonce = (UInt64)(long)rnd.Next() | ((UInt64)(long)rnd.Next() << 32);
+            nonce = hnonce = (UInt32)(long)rnd.Next();
             var bytes = BitConverter.GetBytes(hnonce).Reverse().ToArray();
             header = header.Concat(bytes).ToArray();
             var hash = new Crypto.Blake2B(256);
@@ -175,7 +175,7 @@ namespace SharedSerialization
         public UInt64 height;
         public UInt64 job_id;
         public UInt32 edge_bits = 29;
-        public UInt64 nonce;
+        public UInt32 nonce;
         public List<UInt32> pow;
     }
 
