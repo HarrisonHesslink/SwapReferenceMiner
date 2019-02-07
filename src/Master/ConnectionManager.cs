@@ -16,8 +16,8 @@ namespace Mozkomor.GrinGoldMiner
         public static volatile int solutionCounter = 0;
         private static volatile int solutionRound = 1000;
         //private static volatile int solverswitchmin = 5;
-        private const int solverswitch = 980;
-        private static volatile int prepConn = 10;
+        private const int solverswitch = 1000;
+        private static volatile int prepConn = 0;
         //private static volatile int solmfcnt = 0;
         //private static volatile int solgfcnt = 0;
         private static volatile uint totalsolutionCounter = 0;
@@ -497,32 +497,9 @@ namespace Mozkomor.GrinGoldMiner
                 solutions++;
                 solutionCounter++;
 
-                if (solutionCounter == solverswitch - prepConn)
+                if (solutionCounter == solverswitch)
                 {
-                    Logger.Log(LogLevel.DEBUG, $"({solutionCounter}) SWITCHER: start connecting mf gf");
-                    //start connecting mf gf
-                    if (!isMfConnecting)
-                    {
-                        stopConnecting = false;
-                        isMfConnecting = true;
-                        Task.Run(() => ConnectMf());
-                    }
-
-                    if (!IsGfConnecting)
-                    {
-                        stopConnecting = false;
-                        IsGfConnecting = true;
-                        Task.Run(() => ConnectGf());
-                    }
-                }
-                else if (solutionCounter == solverswitch)
-                {
-                    Logger.Log(LogLevel.DEBUG, $"({solutionCounter}) solutionCounter == solverswitch");
-                    if (curr_mf?.IsConnected == true)
-                    {
-                        Logger.Log(LogLevel.DEBUG, $"({solutionCounter}) SWITCHER: pushing MF job to workers");
-                        curr_mf.PushJobToWorkers();
-                    }
+                    resetRound();
                 }
                 else if (solutionCounter == solverswitch + 10)
                 {
