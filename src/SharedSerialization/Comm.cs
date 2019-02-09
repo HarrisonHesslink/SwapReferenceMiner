@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 
 namespace SharedSerialization
 {
@@ -47,8 +48,7 @@ namespace SharedSerialization
             nonce = hnonce = (UInt32)(long)rnd.Next();
             var bytes = BitConverter.GetBytes(hnonce).Reverse().ToArray();
             header = header.Concat(bytes).ToArray();
-            var hash = new Crypto.Blake2B(256);
-            byte[] blaked = hash.ComputeHash(header);
+            byte[] blaked = Blake2Sharp.Blake2B.ComputeHash(header);
             k0 = BitConverter.ToUInt64(blaked, 0);
             k1 = BitConverter.ToUInt64(blaked, 8);
             k2 = BitConverter.ToUInt64(blaked, 16);
@@ -110,20 +110,18 @@ namespace SharedSerialization
         {
             try
             {
-                BitArray packed = new BitArray(32 * 29);
-                byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
+                BitArray packed = new BitArray(32 * 32);
+                byte[] packedSolution = new byte[128]; // 32*proof_size/8 padded
                 int position = 0;
                 foreach (var n in nonces)
                 {
-                    for (int i = 0; i < 29; i++)
+                    for (int i = 0; i < 32; i++)
                         packed.Set(position++, (n & (1UL << i)) != 0);
                 }
                 packed.CopyTo(packedSolution, 0);
-
-                var hash = new Crypto.Blake2B(256);
-
-                var hashedBytes = hash.ComputeHash(packedSolution).Reverse().ToArray();
-                BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
+ 		
+                var hashedBytes = Blake2Sharp.Blake2B.ComputeHash(packedSolution).ToArray();
+		BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
                 BigInteger difficulty = umax  / hash256;
                 //bool A = difficulty >= 4;
                 //bool B = hashedBytes[0] < 32;
@@ -137,23 +135,22 @@ namespace SharedSerialization
             }
         }
          
-
         //public bool CheckDifficulty()
         //{
         //    try
         //    {
-        //        BitArray packed = new BitArray(32 * 29);
-        //        byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
+        //        BitArray packed = new BitArray(32 * 32);
+        //        byte[] packedSolution = new byte[128]; // 32*proof_size/8 padded
         //        int position = 0;
         //        foreach (var n in nonces)
         //        {
-        //            for (int i = 0; i < 29; i++)
+        //            for (int i = 0; i < 32; i++)
         //                packed.Set(position++, (n & (1UL << i)) != 0);
         //        }
         //        packed.CopyTo(packedSolution, 0);
 
         //        var hash = new Crypto.Blake2B(256);
-        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).Reverse().ToArray(), 24);
+        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).ToArray(), 24);
 
         //        BigInteger shift = (new BigInteger(job.scale)) << 64;
         //        BigInteger diff = shift / new BigInteger(blaked);
@@ -184,7 +181,7 @@ namespace SharedSerialization
     {
         public string login;
         public string pass;
-        public string agent = "SwapRefMiner/0.0.1";
+        public string agent = "SwapRefMiner/1.0.0rc";
     }
 
     //stratum
