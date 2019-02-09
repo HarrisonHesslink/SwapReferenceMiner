@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OclSolver", "OclSolver\OclS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharedSerialization", "SharedSerialization\SharedSerialization.csproj", "{CBD61C2E-81D2-4EFA-ACC7-3B37458B2323}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrinGoldMinerCLI", "GrinGoldMinerCLI\GrinGoldMinerCLI.csproj", "{0A2D0014-1817-455A-969C-F3225179175D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SwapReferenceMinerCLI", "GrinGoldMinerCLI\SwapReferenceMinerCLI.csproj", "{0A2D0014-1817-455A-969C-F3225179175D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cudacka10", "Cudacka10\Cudacka10.vcxproj", "{738AD549-2DDC-4F13-99CC-761DA6135660}"
 EndProject
