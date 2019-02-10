@@ -74,7 +74,7 @@ namespace Mozkomor.GrinGoldMiner
         private static string _logPath;
         private static DateTime _lastDayLogCreated;
         private static Dictionary<string, int> msgcnt = new Dictionary<string, int>();
-        public static string[] last5msg = new string[5];
+        public static string[] last5msg = new string[15];
         public static volatile ConsoleOutputMode consoleMode = ConsoleOutputMode.STATIC_TUI;
 
         private static string LogPath
@@ -190,6 +190,16 @@ namespace Mozkomor.GrinGoldMiner
 
         private static void pushMessage(string msg)
         {
+            last5msg[14] = last5msg[13];
+            last5msg[13] = last5msg[12];
+            last5msg[12] = last5msg[11];
+            last5msg[11] = last5msg[10];
+            last5msg[10] = last5msg[9];
+            last5msg[9] = last5msg[8];
+            last5msg[8] = last5msg[7];
+            last5msg[7] = last5msg[6];
+            last5msg[6] = last5msg[5];
+            last5msg[5] = last5msg[4];
             last5msg[4] = last5msg[3];
             last5msg[3] = last5msg[2];
             last5msg[2] = last5msg[1];
@@ -199,7 +209,7 @@ namespace Mozkomor.GrinGoldMiner
 
         public static string GetlastLogs()
         {
-            return $"{Shorten(last5msg[0])}\n{Shorten(last5msg[1])}\n{Shorten(last5msg[2])}\n{Shorten(last5msg[3])}\n{Shorten(last5msg[4])}";
+            return $"{Shorten(last5msg[0])}\n{Shorten(last5msg[1])}\n{Shorten(last5msg[2])}\n{Shorten(last5msg[3])}\n{Shorten(last5msg[4])}\n{Shorten(last5msg[5])}\n{Shorten(last5msg[6])}\n{Shorten(last5msg[7])}\n{Shorten(last5msg[8])}\n{Shorten(last5msg[9])}\n{Shorten(last5msg[10])}\n{Shorten(last5msg[11])}\n{Shorten(last5msg[12])}\n{Shorten(last5msg[13])}\n{Shorten(last5msg[14])}";
         }
 
         public static string Shorten(string s)
