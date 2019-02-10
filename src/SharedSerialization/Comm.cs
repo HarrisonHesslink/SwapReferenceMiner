@@ -110,17 +110,17 @@ namespace SharedSerialization
         {
             try
             {
-                BitArray packed = new BitArray(32 * 32);
-                byte[] packedSolution = new byte[128]; // 32*proof_size/8 padded
+                BitArray packed = new BitArray(32 * 29);
+                byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
                 int position = 0;
                 foreach (var n in nonces)
                 {
-                    for (int i = 0; i < 32; i++)
+                    for (int i = 0; i < 29; i++)
                         packed.Set(position++, (n & (1UL << i)) != 0);
                 }
                 packed.CopyTo(packedSolution, 0);
  		
-                var hashedBytes = Blake2Sharp.Blake2B.ComputeHash(packedSolution).ToArray();
+                var hashedBytes = Blake2Sharp.Blake2B.ComputeHash(packedSolution).Reverse().ToArray();
 		BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
                 BigInteger difficulty = umax  / hash256;
                 //bool A = difficulty >= 4;
