@@ -283,8 +283,12 @@ namespace Mozkomor.GrinGoldMiner
                                         var code = (int)msg["error"]["code"];
                                         switch (code)
                                         {
-                                            case -32505:
+                                            case -32600:
                                                 Logger.Log(LogLevel.WARNING, (string)msg["error"]["message"]);
+                                                sharesRejected++;
+                                                break;
+                                            case -32505:
+                                                Logger.Log(LogLevel.WARNING, "Duplicate Nonce");
                                                 sharesRejected++;
                                                 break;
                                             case -32504:
