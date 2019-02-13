@@ -248,10 +248,10 @@ namespace Mozkomor.GrinGoldMiner
                             case "message":
                                 if(msg.ContainsKey("result"))
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Cyan;
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
                                     try
                                     {
-                                        Logger.Log(LogLevel.INFO, (string)msg["result"]["message"]);
+                                        Logger.Log(LogLevel.INFO, "MESSAGE FROM POOL: " + (string)msg["result"]["message"]);
                                     }
                                     catch { }
                                     Console.ResetColor();
