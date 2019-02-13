@@ -380,7 +380,7 @@ namespace Mozkomor.GrinGoldMinerCLI
                             }
                             //Console.ForegroundColor = ConsoleColor.Yellow;
                             //Console.WriteLine("Last log messages:"); Console.ResetColor();
-                            WipeLines(5);
+                            WipeLines(15);
                             Console.WriteLine(Logger.GetlastLogs());
                             WipeLine();
                         }
