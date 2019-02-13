@@ -245,6 +245,18 @@ namespace Mozkomor.GrinGoldMiner
                                         Logger.Log(LogLevel.WARNING, $"Incorrect pre_pow: {CurrentJob.pre_pow}");
                                 }
                                 break;
+                            case "message":
+                                if(msg.ContainsKey("result"))
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Cyan;
+                                    try
+                                    {
+                                        Logger.Log(LogLevel.INFO, (string)msg["result"]["message"]);
+                                    }
+                                    catch { }
+                                    Console.ResetColor();
+                                }
+                                break;
                             case "submit":
                                 if (msg.ContainsKey("result") && msg["result"].ToString() == "ok")
                                 {
@@ -271,6 +283,14 @@ namespace Mozkomor.GrinGoldMiner
                                         var code = (int)msg["error"]["code"];
                                         switch (code)
                                         {
+                                            case -32505:
+                                                Logger.Log(LogLevel.WARNING, (string)msg["error"]["message"]);
+                                                sharesRejected++;
+                                                break;
+                                            case -32504:
+                                                Logger.Log(LogLevel.WARNING, "Not authenticated");
+                                                sharesRejected++;
+                                                break;
                                             case -32503:
                                                 Logger.Log(LogLevel.WARNING, "Solution submitted too late");
                                                 sharesTooLate++;
