@@ -578,7 +578,12 @@ namespace Mozkomor.GrinGoldMiner
             try
             {
                 // difficulty check here
-                if (activeSolution.CheckDifficulty())
+
+		if(activeSolution.job.height != CurrentJob.height)
+		{
+		    Logger.Log(LogLevel.WARNING, "stale solution");
+		}
+		else if (activeSolution.CheckDifficulty())
                 {
                     SubmitParams pow = new SubmitParams() { height = activeSolution.job.height, nonce = activeSolution.job.nonce, pow = activeSolution.nonces.ToList(), job_id = activeSolution.job.jobID };
                     StratumRpcRequest request = new StratumRpcRequest(StratumCommand.Solution);
