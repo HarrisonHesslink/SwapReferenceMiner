@@ -376,6 +376,8 @@ namespace OclSolver
 
                                                 //srw.Stop();
                                                 //Console.WriteLine("RECOVERY " + srw.ElapsedMilliseconds);
+						
+                                                do{
 
                                                 currentJob = currentJob.Next();
 
@@ -424,10 +426,7 @@ namespace OclSolver
 
                                                 Logger.Log(LogLevel.Info, string.Format("GPU AMD{2}:    Trimmed in {0}ms to {1} edges", sw.ElapsedMilliseconds, edgesCount[0], deviceID));
 
-                                                if (!TEST && ((currentJob.height != Comms.nextJob.height) || (currentJob.origin != Comms.nextJob.origin)))
-                                                {
-                                                    continue;
-                                                }
+                                                }while(!TEST && (currentJob.height != Comms.nextJob.height));
 
                                                 CGraph cg = FinderBag.GetFinder();
                                                 cg.SetEdges(edgesLeft, (int)edgesCount[0]);
