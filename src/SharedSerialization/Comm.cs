@@ -181,7 +181,7 @@ namespace SharedSerialization
     {
         public string login;
         public string pass;
-        public string agent = "SwapRefMiner/1.1.0";
+        public string agent = "SwapRefMiner/1.2.0";
     }
 
     //stratum

@@ -312,7 +312,7 @@ namespace Mozkomor.GrinGoldMinerCLI
                             string who = ConnectionManager.IsInFee() ? "FEE" : (conn?.login ?? "USER");
                             who = who.Length > 10 ? who.Substring(0, 10)+".." : who;
 
-                            Console.WriteLine("Swap Reference Miner 1.1.0 - based on Grin Gold Miner 2.9 - Make mining grin again");
+                            Console.WriteLine("Swap Reference Miner 1.2.0 - based on Grin Gold Miner 2.9 - Make mining grin again");
                             Console.WriteLine("------------------------------------------------------------------------------------------");
                             WipeLine();
                             Console.Write("Mining for: ");
