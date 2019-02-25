@@ -378,7 +378,11 @@ namespace OclSolver
                                                 //Console.WriteLine("RECOVERY " + srw.ElapsedMilliseconds);
 						
                                                 do{
-
+                                                if (!TEST && ((currentJob.pre_pow != Comms.nextJob.pre_pow) || (currentJob.origin != Comms.nextJob.origin)))
+                                                {
+                                                    currentJob = Comms.nextJob;
+                                                    currentJob.timestamp = DateTime.Now;
+                                                }
                                                 currentJob = currentJob.Next();
 
                                                 kernelSeedA.SetKernelArgumentGeneric(0, currentJob.k0);
@@ -424,9 +428,9 @@ namespace OclSolver
                                                 currentJob.trimTime = sw.ElapsedMilliseconds;
                                                 currentJob.solvedAt = DateTime.Now;
 
-                                                Logger.Log(LogLevel.Info, string.Format("GPU AMD{2}:    Trimmed in {0}ms to {1} edges", sw.ElapsedMilliseconds, edgesCount[0], deviceID));
+                                                Logger.Log(LogLevel.Info, string.Format("GPU AMD{2}:    Trimmed in {0}ms to {1} edges, h {3}", sw.ElapsedMilliseconds, edgesCount[0], deviceID,currentJob.height));
 
-                                                }while(!TEST && (currentJob.height != Comms.nextJob.height));
+                                                }while((currentJob.height != Comms.nextJob.height)&&(!Comms.IsTerminated)&&(!TEST));
 
                                                 CGraph cg = FinderBag.GetFinder();
                                                 cg.SetEdges(edgesLeft, (int)edgesCount[0]);
