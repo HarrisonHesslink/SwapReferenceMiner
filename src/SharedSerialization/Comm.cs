@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
 
 namespace SharedSerialization
 {
@@ -110,18 +109,20 @@ namespace SharedSerialization
         {
             try
             {
-                BitArray packed = new BitArray(32 * 28);
-                byte[] packedSolution = new byte[112]; // 32*proof_size/8 padded
+                BitArray packed = new BitArray(42 * 29);
+                byte[] packedSolution = new byte[153]; // 42*proof_size/8 padded
                 int position = 0;
                 foreach (var n in nonces)
                 {
-                    for (int i = 0; i < 28; i++)
+                    for (int i = 0; i < 29; i++)
                         packed.Set(position++, (n & (1UL << i)) != 0);
                 }
                 packed.CopyTo(packedSolution, 0);
- 		
-                var hashedBytes = Blake2Sharp.Blake2B.ComputeHash(packedSolution).Reverse().ToArray();
-		        BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
+
+                var hash = new Crypto.Blake2B(256);
+
+                var hashedBytes = hash.ComputeHash(packedSolution).Reverse().ToArray();
+                BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
                 BigInteger difficulty = umax  / hash256;
                 //bool A = difficulty >= 4;
                 //bool B = hashedBytes[0] < 32;
@@ -139,18 +140,18 @@ namespace SharedSerialization
         //{
         //    try
         //    {
-        //        BitArray packed = new BitArray(32 * 32);
-        //        byte[] packedSolution = new byte[128]; // 32*proof_size/8 padded
+        //        BitArray packed = new BitArray(42 * 29);
+        //        byte[] packedSolution = new byte[153]; // 42*proof_size/8 padded
         //        int position = 0;
         //        foreach (var n in nonces)
         //        {
-        //            for (int i = 0; i < 32; i++)
+        //            for (int i = 0; i < 29; i++)
         //                packed.Set(position++, (n & (1UL << i)) != 0);
         //        }
         //        packed.CopyTo(packedSolution, 0);
 
         //        var hash = new Crypto.Blake2B(256);
-        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).ToArray(), 24);
+        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).Reverse().ToArray(), 24);
 
         //        BigInteger shift = (new BigInteger(job.scale)) << 64;
         //        BigInteger diff = shift / new BigInteger(blaked);
@@ -171,8 +172,8 @@ namespace SharedSerialization
     {
         public UInt64 height;
         public UInt64 job_id;
-        public UInt32 edge_bits = 28;
-        public UInt32 nonce;
+        public UInt32 edge_bits = 29;
+        public UInt64 nonce;
         public List<UInt32> pow;
     }
 
@@ -297,3 +298,58 @@ namespace SharedSerialization
     //    public List<GPUOption> Cards { get; set; }
     //}
 }
+
+using System.Numerics;
+using System.Text;
+
+        static BigInteger umax = (BigInteger.One << 256) - 1;
+        public bool CheckDifficulty()
+        {
+            try
+            {
+                BitArray packed = new BitArray(32 * 29);
+                byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
+                int position = 0;
+                foreach (var n in nonces)
+                {
+                    for (int i = 0; i < 29; i++)
+                        packed.Set(position++, (n & (1UL << i)) != 0);
+                }
+                packed.CopyTo(packedSolution, 0);
+ 		
+                var hashedBytes = Blake2Sharp.Blake2B.ComputeHash(packedSolution).Reverse().ToArray();
+		BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
+                BigInteger difficulty = umax  / hash256;
+                //bool A = difficulty >= 4;
+                //bool B = hashedBytes[0] < 32;
+                return difficulty >= job.difficulty;
+                //return difficulty >= Math.Max(8, job.difficulty);
+                //return difficulty >= Math.Max(4,  job.difficulty);
+            }
+            catch
+            {
+                return false;
+            }
+        //    try
+        //    {
+        //        BitArray packed = new BitArray(32 * 32);
+        //        byte[] packedSolution = new byte[128]; // 32*proof_size/8 padded
+        //        int position = 0;
+        //        foreach (var n in nonces)
+        //        {
+        //            for (int i = 0; i < 32; i++)
+        //                packed.Set(position++, (n & (1UL << i)) != 0);
+        //        }
+        //        packed.CopyTo(packedSolution, 0);
+
+        //        var hash = new Crypto.Blake2B(256);
+        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).ToArray(), 24);
+
+        //        BigInteger shift = (new BigInteger(job.scale)) << 64;
+        //        BigInteger diff = shift / new BigInteger(blaked);
+
+        //        ulong share_difficulty = Math.Min((UInt64)diff, UInt64.MaxValue);
+
+        //        return share_difficulty >= job.difficulty;
+        public UInt32 edge_bits = 29;
+        public UInt32 nonce;
