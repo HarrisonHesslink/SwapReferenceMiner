@@ -1,56 +1,34 @@
-# GGM - open-source Grin GPU miner
+# GGM - Grin GPU Miner
 
-**Update: GGM3 is compatible with Cuckarood29 PoW activated in 7/2019**
+Miner supports all AMD and NVIDIA 6GB cards. 6GB cards need Linux or Windows7 at the moment because Windows reserves too much memory on those cards. Only GPU PoW Cuckaroo29 is supported at this time. 
 
-Miner supports all AMD and NVIDIA 6GB+ cards for both Linux and Winows (MacOS untested). Up to 60% faster compared to GGM2.
+RTX 2080 and RTX 2080Ti are fastest, OpenCL code for AMD cards is being optimized. Cheap Celeron CPU is not recommended for many cards on the system.
 
-GGM releases collect 1% fee for the Grin Development Fund and 1% fee for further miner development.
+General GGM chat https://gitter.im/GrinGoldMiner/community
 
-If you disable fees or profit from the code in some way, consider donating to:
+For more information about grin, wallet and node downloads see https://github.com/mimblewimble/grin
+Node and wallet do not work with with Windows Subsystem Linux (WSL), use Virtual Machine or dedicated machine. Windows node+wallet being developed here  https://github.com/GrinPlusPlus/GrinPlusPlus
 
-BTC 37WJeFqsvSSdC9BbJUW96oCqzSe4TeESnF
+Closed source GGM build with 10-15% extra speed, local json API and other features at https://grinpro.io/
 
-## How to build
+Contact us at mozkomorkaban@gmail.com Discord GrinPro/GGM https://discord.gg/vGQ2fR
 
-Miner is written entirely in C# using new open-source .NET implementation called Dotnet Core.
+GGM/GrinPro releases will collect 1% fee for the Grin Development Fund and 1% fee for further miner development
 
-Instal dotnet core 2.2 SDK (Linux/Windows/Mac) from https://dotnet.microsoft.com/download
+[FAQ and Help here](help.md)  - how to configure your backup pool connection, how to load config from different location, how to switch to rolling console mode and more...
 
-Clone the repository and go to _build forder.
+VIDEO GUIDE:
+<p>
+<a href="https://www.youtube.com/watch?v=e3mm60R5-ZE">
+  <img src="https://img.youtube.com/vi/Y-kF9RnkeJo/0.jpg" align="center" height="128" width="164" >
+</a>
+</p>
 
-Run `build_win.bat` (Windows) or `build_linux.sh` (Linux). Alternatively, run `build_[OS]_API.bat` to build a miner with remote API support.
-API version can be used with our dashboard project to manage multiple rigs.
+------------------------------------
 
-Run `run_miner_win.bat` or `run_miner_linux.sh` to start the miner.
+![Screen](/img/GGM_Windows_B3.png)
+![Screen](/img/GGM_Linux_B3.png)
 
-*If you wish to build CUDA .ptx intermediate code yourself, install CUDA SDK with compatible compiler and compile the project in Cudacka folder.
-Pre-generated PTX file is already included in the repository so there is no need to pre-compile it yourself.*
+Cuda and OpenCL solveres are released under FAIR MINING license https://github.com/tromp/cuckoo/blob/master/LICENSE.txt
 
-## How to run binary releases
-
-Both Winows and Linux builds are self-contained and come with all needed dotnet core libraries, there is no need to install any additional SW.
-
-## Configuration
-
-GPUs should be auto-detected on first launch. Once `config.xml` is created you can edit is to access hidden options:
-
-### Define log level
-
-```xml
-    <FileMinimumLogLevel>INFO</FileMinimumLogLevel>
-    <ConsoleMinimumLogLevel>DEBUG</ConsoleMinimumLogLevel>
-```
-
-If you want to see all the details that are happening in the background, change the configration as above. Possible log level options are DEBUG, INFO, WARNING, ERROR.
-
-### Change CPU load
-
-Locate this line in the config
-
-```xml
-  <CPUOffloadValue>
-    0
-  </CPUOffloadValue>
-```
-
-If you wish to reduce CPU load use small numbers (1..10), if you have a powerful multi-core CPU then you can try higher values like 50..100. Value 0 mean auto-balancer. Automatic setting may not work optimally with either very weak CPUs and/or many fast GPUs on the PC (8 and more Vegas for example).
+Thanks to OhGodACompany for sending GTX1080Ti

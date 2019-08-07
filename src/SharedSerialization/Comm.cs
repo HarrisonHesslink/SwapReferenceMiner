@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 
 namespace SharedSerialization
 {
@@ -22,23 +23,19 @@ namespace SharedSerialization
             height = _job.height;
             timestamp = DateTime.Now;
             scale = _job.GetScale();
-            //poolNonce = _job.id;
-            type = (_job.proofsize == 32) ? CuckooType.SWAP : CuckooType.GRIN29;
         }
 
         private static Random rnd = new Random((int)DateTime.Now.Ticks);
 
         public DateTime timestamp;
         public DateTime solvedAt;
-        public UInt64 nonce, height, difficulty, jobID, scale;
-        public UInt64 hnonce;
+        public UInt64 height, difficulty, jobID, scale;
+        public UInt32 hnonce, nonce;
         public UInt64 k0;
         public UInt64 k1;
         public UInt64 k2;
         public UInt64 k3;
         public string pre_pow = "";
-        public CuckooType type = CuckooType.GRIN29;
-        public uint poolNonce = 0;
 
         public int graphAttempts = 0;
         public long trimTime = 0;
@@ -48,34 +45,10 @@ namespace SharedSerialization
         {
             graphAttempts++;
             var header = GetHeaderBytes();
-
-            if (type == CuckooType.GRIN29)
-                nonce = hnonce = (UInt64)(long)rnd.Next() | ((UInt64)(long)rnd.Next() << 32);
-            else
-                nonce = hnonce = (UInt64)(long)rnd.Next() /*| ((UInt64)(long)poolNonce << 32)*/;
-
-            //nonce = hnonce = 1507838042;
-
-            var bytes = type == CuckooType.GRIN29 ? BitConverter.GetBytes(hnonce).Reverse().ToArray() : BitConverter.GetBytes((UInt32)hnonce).Reverse().ToArray();
+            nonce = hnonce = (UInt32)(long)rnd.Next();
+            var bytes = BitConverter.GetBytes(hnonce).Reverse().ToArray();
             header = header.Concat(bytes).ToArray();
-            var hash = new Crypto.Blake2B(256);
-            byte[] blaked = hash.ComputeHash(header);
-            k0 = BitConverter.ToUInt64(blaked, 0);
-            k1 = BitConverter.ToUInt64(blaked, 8);
-            k2 = BitConverter.ToUInt64(blaked, 16);
-            k3 = BitConverter.ToUInt64(blaked, 24);
-        }
-
-        private void MutateJob(ref long nce)
-        {
-            graphAttempts++;
-            var header = new byte[76];
-            Array.Clear(header, 0, 76);
-            nonce = hnonce = (ulong)++nce;
-            var bytes = BitConverter.GetBytes((uint)hnonce)./*Reverse().*/ToArray();
-            header = header.Concat(bytes).ToArray();
-            var hash = new Crypto.Blake2B(256);
-            byte[] blaked = hash.ComputeHash(header);
+            byte[] blaked = Blake2Sharp.Blake2B.ComputeHash(header);
             k0 = BitConverter.ToUInt64(blaked, 0);
             k1 = BitConverter.ToUInt64(blaked, 8);
             k2 = BitConverter.ToUInt64(blaked, 16);
@@ -97,21 +70,9 @@ namespace SharedSerialization
 
         public Job Next()
         {
-            Job next = new Job() { type = this.type, poolNonce = this.poolNonce, scale = this.scale, origin = this.origin, difficulty = this.difficulty, height = this.height, jobID = this.jobID, pre_pow = this.pre_pow, timestamp = this.timestamp, graphAttempts = this.graphAttempts };
+            Job next = new Job() { scale = this.scale, origin = this.origin, difficulty = this.difficulty, height = this.height, jobID = this.jobID, pre_pow = this.pre_pow, timestamp = this.timestamp, graphAttempts = this.graphAttempts };
             next.MutateJob();
             return next;
-        }
-
-        public Job NextSequential(ref long nonce)
-        {
-            Job next = new Job() { type = this.type, poolNonce = this.poolNonce, scale = this.scale, origin = this.origin, difficulty = this.difficulty, height = this.height, jobID = this.jobID, pre_pow = this.pre_pow, timestamp = this.timestamp, graphAttempts = this.graphAttempts };
-            next.MutateJob(ref nonce);
-            return next;
-        }
-
-        public int GetProofSize()
-        {
-            return (type == CuckooType.GRIN29) ? 42 : 32;
         }
     }
     [SerializableAttribute]
@@ -133,7 +94,6 @@ namespace SharedSerialization
         public List<Edge> edges;
         public UInt32[] nonces;
         public UInt64 share_difficulty;
-        public double fidelity;
 
         public ulong[] GetUlongEdges()
         {
@@ -150,41 +110,24 @@ namespace SharedSerialization
         {
             try
             {
-                if (job.type == CuckooType.GRIN29)
+                BitArray packed = new BitArray(32 * 28);
+                byte[] packedSolution = new byte[112]; // 32*proof_size/8 padded
+                int position = 0;
+                foreach (var n in nonces)
                 {
-                    BitArray packed = new BitArray(42 * 29);
-                    byte[] packedSolution = new byte[153]; // 42*proof_size/8 padded
-                    int position = 0;
-                    foreach (var n in nonces)
-                    {
-                        for (int i = 0; i < 29; i++)
-                            packed.Set(position++, (n & (1UL << i)) != 0);
-                    }
-                    packed.CopyTo(packedSolution, 0);
-                    var hash = new Crypto.Blake2B(256);
-                    var hashedBytes = hash.ComputeHash(packedSolution).Reverse().ToArray();
-                    BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray());
-                    BigInteger difficulty = umax / hash256;
-                    return difficulty >= job.difficulty;
+                    for (int i = 0; i < 28; i++)
+                        packed.Set(position++, (n & (1UL << i)) != 0);
                 }
-                else
-                {
-                    BitArray packed = new BitArray(32 * 29);
-                    byte[] packedSolution = new byte[116]; // 32*proof_size/8 padded
-                    int position = 0;
-                    for (int nx = 0; nx < 32; nx++)
-                    {
-                        var n = nonces[nx];
-                        for (int i = 0; i < 29; i++)
-                            packed.Set(position++, (n & (1UL << i)) != 0);
-                    }
-                    packed.CopyTo(packedSolution, 0);
-                    var hash = new Crypto.Blake2B(256);
-                    var hashedBytes = hash.ComputeHash(packedSolution).Reverse().ToArray();
-                    BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray());
-                    BigInteger difficulty = umax / hash256;
-                    return difficulty >= job.difficulty;
-                }
+                packed.CopyTo(packedSolution, 0);
+ 		
+                var hashedBytes = Blake2Sharp.Blake2B.ComputeHash(packedSolution).Reverse().ToArray();
+		        BigInteger hash256 = new BigInteger(hashedBytes.Concat(new byte[] { 0 }).ToArray() );
+                BigInteger difficulty = umax  / hash256;
+                //bool A = difficulty >= 4;
+                //bool B = hashedBytes[0] < 32;
+                return difficulty >= job.difficulty;
+                //return difficulty >= Math.Max(8, job.difficulty);
+                //return difficulty >= Math.Max(4,  job.difficulty);
             }
             catch
             {
@@ -192,23 +135,22 @@ namespace SharedSerialization
             }
         }
          
-
         //public bool CheckDifficulty()
         //{
         //    try
         //    {
-        //        BitArray packed = new BitArray(42 * 29);
-        //        byte[] packedSolution = new byte[153]; // 42*proof_size/8 padded
+        //        BitArray packed = new BitArray(32 * 32);
+        //        byte[] packedSolution = new byte[128]; // 32*proof_size/8 padded
         //        int position = 0;
         //        foreach (var n in nonces)
         //        {
-        //            for (int i = 0; i < 29; i++)
+        //            for (int i = 0; i < 32; i++)
         //                packed.Set(position++, (n & (1UL << i)) != 0);
         //        }
         //        packed.CopyTo(packedSolution, 0);
 
         //        var hash = new Crypto.Blake2B(256);
-        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).Reverse().ToArray(), 24);
+        //        UInt64 blaked = BitConverter.ToUInt64(hash.ComputeHash(packedSolution).ToArray(), 24);
 
         //        BigInteger shift = (new BigInteger(job.scale)) << 64;
         //        BigInteger diff = shift / new BigInteger(blaked);
@@ -229,8 +171,8 @@ namespace SharedSerialization
     {
         public UInt64 height;
         public UInt64 job_id;
-        public UInt32 edge_bits = 29;
-        public UInt64 nonce;
+        public UInt32 edge_bits = 28;
+        public UInt32 nonce;
         public List<UInt32> pow;
     }
 
@@ -239,16 +181,7 @@ namespace SharedSerialization
     {
         public string login;
         public string pass;
-        public string agent = "GrinGoldMiner";
-    }
-
-    public class CuckooMineLoginParams
-    {
-        public string login;
-        public string pass;
-        public string agent = "GrinProMiner";
-        public string challenge;
-
+        public string agent = "SwapRefMiner/1.2.0";
     }
 
     //stratum
@@ -258,9 +191,6 @@ namespace SharedSerialization
         public UInt64 job_id;
         public UInt64 difficulty;
         public string pre_pow;
-
-        public byte proofsize;
-        public UInt64 id;
 
         public ulong GetScale()
         {
@@ -355,19 +285,11 @@ namespace SharedSerialization
         gf
     }
 
-
-    public enum CuckooType : byte
-    {
-        GRIN29,
-        SWAP
-    }
-
     [SerializableAttribute]
     public class GpuSettings
     {
         public int targetGraphTimeOverride;
         public int numberOfGPUs;
-        public string gpuSettings;
     }
 
     //public class GPUOptions

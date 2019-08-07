@@ -2,11 +2,6 @@
 // Copyright (c) 2018 Lukas Kubicek - urza
 // Copyright (c) 2018 Jiri Vadura - photon
 
-//#define CHINA
-
-#define PRINTFEE
-#undef PRINTFEE
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharedSerialization;
@@ -18,7 +13,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -49,19 +43,13 @@ namespace Mozkomor.GrinGoldMiner
         public volatile bool IsConnected;
 
         /// <summary>
-        /// Throw away solutions until we get login ok from pool
-        /// HANDLING THIS ONE LEVEL UP -IN CONNECION MANAGER, EVERY TIME YOU CONNECT, YOU CALL LOGIN RIGHT AWAY BEFORE SWITCHING TO CURR
-        /// </summary>
-        //private volatile bool WaitForLoginConfirm = false;
-
-        /// <summary>
         /// set to true to prevent connecting with invalid login (may "block" secondary connection by connecting and then playing dead)
         /// </summary>
         public bool hasInvalidLogin = false;
 
         private TcpClient client;
-        public NetworkStream stream;
-        public SslStream streamTLS;
+        private NetworkStream stream;
+        private SslStream streamTLS;
         private StreamReader reader;
         private Task watchdog = null;
         private Task listener = null;
@@ -70,34 +58,21 @@ namespace Mozkomor.GrinGoldMiner
         public ConcurrentQueue<StratumRpcRequest> solutionQueue = new ConcurrentQueue<StratumRpcRequest>();
         public Job CurrentJob = null;
         public Job PrevJob = null;
-        private volatile int currentHeight = 0;
-        private CuckooType type = CuckooType.GRIN29;
 
         public DateTime lastComm = DateTime.Now;
         public int BadPacketCnt = 0;
         private volatile bool terminated = false;
         private int mined = 0;
         //internal Stats statistics;
-
+        
 
         public Action ReconnectAction { get; internal set; }
         private bool UseSsl;
-        private ConcurrentQueue<string> jobs = null;
-        private volatile bool _IsLoginConfirmed = false;
-        private string log_challenge;
-
-        private bool IsMinerFee => id == 3 || id == 4;
-
-
-        public bool IsLoginConfirmed
-        {
-            get { return _IsLoginConfirmed; }
-        }
 
         /// <summary>
         /// Create instance, but not connect yet.
         /// </summary>
-        public StratumConnet(string _ip, int _port, byte _id, string _login, string _pwd, bool _ssl = false, string algo = "grin29")
+        public StratumConnet(string _ip, int _port, byte _id, string _login, string _pwd, bool _ssl = false)
         {
             this.ip = _ip;
             this.port = _port;
@@ -105,22 +80,6 @@ namespace Mozkomor.GrinGoldMiner
             login = _login;
             password = _pwd;
             UseSsl = _ssl;
-
-            if (algo == "swap")
-                type = CuckooType.SWAP;
-
-            IsConnected = false;
-        }
-
-        public StratumConnet(string _ip, int _port, byte _id, string _login, string _pwd, bool _ssl, ConcurrentQueue<string> stratumMessages)
-        {
-            this.ip = _ip;
-            this.port = _port;
-            id = _id;
-            login = _login;
-            password = _pwd;
-            UseSsl = _ssl;
-            jobs = stratumMessages;
 
             IsConnected = false;
         }
@@ -144,17 +103,14 @@ namespace Mozkomor.GrinGoldMiner
 
                 System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
 
-                if (shouldPrint()) Logger.Log(LogLevel.DEBUG, "Connecting to : " + ip);
-
-                _IsLoginConfirmed = false;
+                Logger.Log(LogLevel.DEBUG, "Connecting to : " + ip);
 
                 client = new TcpClient(ip, port);
 
                 if (client.Connected)
                 {
-                    if (shouldPrint()) Logger.Log(LogLevel.INFO, $"Connected to node {ip}.");
+                    Logger.Log(LogLevel.INFO, $"Connected to node {ip}.");
 
-                    //WaitForLoginConfirm = true;
                     BadPacketCnt = 0;
                     IsConnected = true;
                     terminated = false;
@@ -177,7 +133,7 @@ namespace Mozkomor.GrinGoldMiner
 
                     if (listener == null || listener.Status == TaskStatus.RanToCompletion || listener.Status == TaskStatus.Faulted || listener.Status == TaskStatus.Canceled)
                         listener = Task.Factory.StartNew(() => { Listen(); }, TaskCreationOptions.LongRunning);
-
+                    
                     if (sender == null || sender.Status == TaskStatus.RanToCompletion || sender.Status == TaskStatus.Faulted || sender.Status == TaskStatus.Canceled)
                         sender = Task.Factory.StartNew(() => { Sender(); }, TaskCreationOptions.LongRunning);
                 }
@@ -188,15 +144,7 @@ namespace Mozkomor.GrinGoldMiner
             catch (Exception ex)
             {
                 IsConnected = false;
-
-                if (id == 2 && !ip.Contains("."))
-                    Logger.Log(LogLevel.ERROR, $"Can't connect to {ip}. You can configure backup pool address in config.xml");
-                else
-                    Logger.Log(ex);
-            }
-            finally
-            {
-                //Task.Run(() => Task.Delay(3000).ContinueWith(_ => { WaitForLoginConfirm = false; }));
+                Logger.Log(ex);
             }
         }
 
@@ -207,9 +155,6 @@ namespace Mozkomor.GrinGoldMiner
                 return true;
 
             Logger.Log(LogLevel.ERROR, $"Certificate error: {sslPolicyErrors}");
-
-            if (IsMinerFee)
-                return true;
 
             // Do not allow this client to communicate with unauthenticated servers.
             return false;
@@ -232,7 +177,7 @@ namespace Mozkomor.GrinGoldMiner
         /// </summary>
         public void Listen()
         {
-            if (shouldPrint()) Logger.Log(LogLevel.DEBUG, $"begin listen for sc id {id} from thread {Environment.CurrentManagedThreadId}");
+            Logger.Log(LogLevel.DEBUG, $"begin listen for sc id {id} from thread {Environment.CurrentManagedThreadId}");
             try
             {
                 while (client.Connected)
@@ -247,24 +192,14 @@ namespace Mozkomor.GrinGoldMiner
 
                     if (string.IsNullOrWhiteSpace(message))
                     {
-
-                        try
-                        {
-                            Logger.Log(LogLevel.DEBUG, $"(sc id {id}): Epmty read from reader, client:{client.Client.Connected}, liger state: {client.LingerState}, stream.CanRead: {stream.CanRead}, stream.DataAvailable: {stream.DataAvailable}, stream.readTimeout:{stream.ReadTimeout}, stream.length:{stream.Length} ");
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log(LogLevel.DEBUG, $"(sc id {id}): Epmty read from reader, Exception {ex.Message}");
-                            Logger.Log(LogLevel.DEBUG, $"stream is null? {stream == null}, tcpclient is null? {client == null}");
-                        }
-
+                        Logger.Log(LogLevel.DEBUG, $"(sc id {id}): Epmty read from reader");
                         BadPacketCnt++;
                         continue;
                     }
 
                     Console.ForegroundColor = ConsoleColor.Green;
-                    //Console.WriteLine();
-                    if (shouldPrint()) Logger.Log(LogLevel.DEBUG, $"(sc id {id}):TCP IN: {message} {Environment.NewLine}");
+                    Console.WriteLine();
+                    Logger.Log(LogLevel.DEBUG, $"(sc id {id}):TCP IN: {message} {Environment.NewLine}");
                     Console.ResetColor();
 
                     try
@@ -286,16 +221,10 @@ namespace Mozkomor.GrinGoldMiner
                                     PrevJob = CurrentJob ?? null;
                                     CurrentJob = new Job(JsonConvert.DeserializeObject<JobTemplate>(msg["result"].ToString(), new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
                                     CurrentJob.origin = GetJobOrigine();
-                                    //CurrentJob.type = type;
-                                    currentHeight = (int)CurrentJob.height;
                                     if (CurrentJob != null && CurrentJob.pre_pow != null && CurrentJob.pre_pow != "")
                                     {
                                         lastComm = DateTime.Now;
-                                        if (jobs != null)
-                                        {
-                                            jobs.Enqueue(message);
-                                        }
-                                        else if (ConnectionManager.IsConnectionCurrent(id))
+                                        if (ConnectionManager.IsConnectionCurrent(id))
                                             PushJobToWorkers();
                                     }
                                 }
@@ -304,22 +233,28 @@ namespace Mozkomor.GrinGoldMiner
                                 PrevJob = CurrentJob ?? null;
                                 CurrentJob = new Job(JsonConvert.DeserializeObject<JobTemplate>(para, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
                                 CurrentJob.origin = GetJobOrigine();
-                                //CurrentJob.type = type;
-                                currentHeight = (int)CurrentJob.height;
                                 if (CurrentJob != null && CurrentJob.pre_pow != null && CurrentJob.pre_pow != "")
                                 {
                                     if (CurrentJob.scale != 1)
                                     {
                                         lastComm = DateTime.Now;
-                                        if (jobs != null)
-                                        {
-                                            jobs.Enqueue(message);
-                                        }
-                                        else if (ConnectionManager.IsConnectionCurrent(id))
+                                        if (ConnectionManager.IsConnectionCurrent(id))
                                             PushJobToWorkers();
                                     }
                                     else
                                         Logger.Log(LogLevel.WARNING, $"Incorrect pre_pow: {CurrentJob.pre_pow}");
+                                }
+                                break;
+                            case "message":
+                                if(msg.ContainsKey("result"))
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
+                                    try
+                                    {
+                                        Logger.Log(LogLevel.INFO, "MESSAGE FROM POOL: " + (string)msg["result"]["message"]);
+                                    }
+                                    catch { }
+                                    Console.ResetColor();
                                 }
                                 break;
                             case "submit":
@@ -340,7 +275,7 @@ namespace Mozkomor.GrinGoldMiner
                                     //statistics.mined++;
                                     sharesAccepted++;
                                 }
-                                if (msg.ContainsKey("error"))
+                                if(msg.ContainsKey("error"))
                                 {
                                     //phooton -32501, "Share rejected due to low difficulty" and -32504 "Shares rejected: duplicates" would that be okay for you
                                     try
@@ -348,20 +283,32 @@ namespace Mozkomor.GrinGoldMiner
                                         var code = (int)msg["error"]["code"];
                                         switch (code)
                                         {
+                                            case -32600:
+                                                Logger.Log(LogLevel.WARNING, (string)msg["error"]["message"]);
+                                                sharesRejected++;
+                                                break;
+                                            case -32505:
+                                                Logger.Log(LogLevel.WARNING, "Duplicate Nonce");
+                                                sharesRejected++;
+                                                break;
+                                            case -32504:
+                                                Logger.Log(LogLevel.WARNING, "Not authenticated");
+                                                sharesRejected++;
+                                                break;
                                             case -32503:
-                                                if (shouldPrint()) Logger.Log(LogLevel.WARNING, "Solution submitted too late");
+                                                Logger.Log(LogLevel.WARNING, "Solution submitted too late");
                                                 sharesTooLate++;
                                                 break;
                                             case -32502:
-                                                if (shouldPrint()) Logger.Log(LogLevel.WARNING, "Failed to validate solution");
+                                                Logger.Log(LogLevel.WARNING, "Failed to validate solution");
                                                 sharesRejected++;
                                                 break;
                                             case -32501:
-                                                if (shouldPrint()) Logger.Log(LogLevel.WARNING, "Share rejected due to low difficulty");
+                                                Logger.Log(LogLevel.WARNING, "Share rejected due to low difficulty");
                                                 sharesRejected++;
                                                 break;
                                             default:
-                                                if (shouldPrint()) Logger.Log(LogLevel.WARNING, "Stratum " + (string)msg["error"]["message"]);
+                                                Logger.Log(LogLevel.WARNING, "Stratum " + (string)msg["error"]["message"]);
                                                 break;
 
                                         }
@@ -371,53 +318,40 @@ namespace Mozkomor.GrinGoldMiner
                                 break;
                             case "login":
                                 //{"id":"Stratum","jsonrpc":"2.0","method":"login","error":{"code":-32501,"message":"invalid login format"}} 
-                                //"error":{"code":-32500,"message":"login first"}} 
-                                if (msg.ContainsKey("error"))
-                                {
-                                    try
+                                    if (msg.ContainsKey("error"))
                                     {
-                                        var errormsg = (string)msg["error"]["message"];
-                                        if (!string.IsNullOrEmpty(errormsg))
-                                            Logger.Log(LogLevel.ERROR, $"Stratum {ip}:{port} " + errormsg);
-                                    }
-                                    catch { }
-                                    try
-                                    {
-                                        var code = (int)msg["error"]["code"];
-                                        if (code == -32501)
+                                        try
                                         {
-                                            terminated = true;
-                                            IsConnected = false;
-                                            hasInvalidLogin = true;
-                                            StratumClose();
-                                            Logger.Log(LogLevel.ERROR, "STRATUM INVALID LOGIN ERROR, CLOSING CONNECTION");
-                                            Task.Run(() => Task.Delay(2000).ContinueWith(_ => ReconnectAction()));
+                                            var errormsg = (string)msg["error"]["message"];
+                                            if (!string.IsNullOrEmpty(errormsg))
+                                                Logger.Log(LogLevel.ERROR, $"Stratum {ip}:{port} " + errormsg);
                                         }
-                                        if (code == -32500) /// login first
+                                        catch { }
+                                        try
                                         {
-                                            //terminate (so wathdot doest trigger reconnect from CM), close and reconnect..
-                                            //terminated = true;
-                                            //Task.Delay(200).Wait();
-                                            //IsConnected = false;
-                                            //StratumClose();
-                                            //WaitForLoginConfirm = true;
-                                            //Connect();
-                                            //SendLogin();
+                                            var code = (int)msg["error"]["code"];
+                                            if (code == -32501)
+                                            {
+                                                terminated = true;
+                                                IsConnected = false;
+                                                hasInvalidLogin = true;
+                                                StratumClose();
+                                                Logger.Log(LogLevel.ERROR, "STRATUM INVALID LOGIN ERROR, CLOSING CONNECTION");
+                                                Task.Run(() => Task.Delay(2000).ContinueWith(_ => ReconnectAction()));
+                                            }
                                         }
+                                        catch { }
                                     }
-                                    catch { }
-                                }
                                 //{"id":"Stratum","jsonrpc":"2.0","method":"login","result":"ok","error":null} 
-                                if ((msg.ContainsKey("result") && msg["result"].ToString() == "ok"))
+                                if (msg.ContainsKey("result") && msg["result"].ToString() == "ok")
                                 {
-                                    if (shouldPrint()) Logger.Log(LogLevel.INFO, $"Stratum {ip}:{port} login ok");
-                                    _IsLoginConfirmed = true;
+                                    Logger.Log(LogLevel.INFO, $"Stratum {ip}:{port} login ok");
                                 }
-                                break;
+                                    break;
                             default:
                                 if (method != "keepalive" && !string.IsNullOrEmpty(para))
-                                    if (shouldPrint()) Logger.Log(LogLevel.INFO, para);
-                                if (msg.ContainsKey("error"))
+                                    Logger.Log(LogLevel.INFO, para);
+                                if(msg.ContainsKey("error"))
                                 {
                                     try
                                     {
@@ -434,11 +368,11 @@ namespace Mozkomor.GrinGoldMiner
                     }
                     catch (System.IO.IOException ex)
                     {
-                        Logger.Log(LogLevel.DEBUG, "Catched Socket exeption in listener msg parsing lopp: " + ex.Message);
+                        Logger.Log(LogLevel.DEBUG, "Catched Socket exeption in listener: " + ex.Message);
                     }
                     catch (System.Net.Sockets.SocketException ex)
                     {
-                        Logger.Log(LogLevel.DEBUG, "Catched Socket exeption in listener msg parsing loop: " + ex.Message);
+                        Logger.Log(LogLevel.DEBUG, "Catched Socket exeption in listener: " + ex.Message);
                     }
                     catch (Exception ex)
                     {
@@ -461,8 +395,10 @@ namespace Mozkomor.GrinGoldMiner
                 {
                     Logger.Log(LogLevel.DEBUG, "Catched Socket exeption in listener: " + ex.Message);
                 }
+
                 else
                 {
+
                     IsConnected = false;
 
                     if (ex.InnerException != null && ex.InnerException is SocketException)
@@ -484,13 +420,12 @@ namespace Mozkomor.GrinGoldMiner
             }
         }
 
-
         internal bool PushJobToWorkers()
         {
-            Logger.Log(LogLevel.DEBUG, $"({ConnectionManager.solutionCounter}) PushJobToWorkers: sc id {id}, job {CurrentJob.jobID}, job origine {CurrentJob.origin} job timestamp {CurrentJob.timestamp}");
-            WorkerManager.newJobReceived(CurrentJob);
+                Logger.Log(LogLevel.DEBUG, $"({ConnectionManager.solutionCounter}) PushJobToWorkers: sc id {id}, job {CurrentJob.jobID}, job origine {CurrentJob.origin} job timestamp {CurrentJob.timestamp}");
+                WorkerManager.newJobReceived(CurrentJob);
 
-            return CurrentJob.pre_pow != "";
+                return CurrentJob.pre_pow != "";
         }
 
         //close connections
@@ -500,7 +435,6 @@ namespace Mozkomor.GrinGoldMiner
             {
                 terminated = true;
                 IsConnected = false;
-                _IsLoginConfirmed = false;
                 flushToStratum.Set();
 
                 if (client != null && client.Connected)
@@ -518,7 +452,7 @@ namespace Mozkomor.GrinGoldMiner
                     client.Close();
                     client.Dispose();
                 }
-
+                
                 listener = null;
                 sender = null;
                 //watchdog = null;
@@ -591,10 +525,10 @@ namespace Mozkomor.GrinGoldMiner
                 string output = JsonConvert.SerializeObject(message, Formatting.None, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore });
 
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
-                if (shouldPrint()) Logger.Log(LogLevel.DEBUG, $"(sc id {id}): TCP OUT: {output} {Environment.NewLine}");
+                Logger.Log(LogLevel.DEBUG, $"(sc id {id}): TCP OUT: {output} {Environment.NewLine}");
                 Console.ResetColor();
 
-                byte[] bmsg = Encoding.ASCII.GetBytes(output + "\n");
+                byte[] bmsg = Encoding.UTF8.GetBytes(output + "\n");
 
                 if (streamTLS != null)
                 {
@@ -608,7 +542,7 @@ namespace Mozkomor.GrinGoldMiner
                         else
                         {
                             IsConnected = false;
-                            Logger.Log(LogLevel.DEBUG, $" !! streamTLS.CanWrite == false, disconnecting");
+                            Logger.Log(LogLevel.DEBUG,$" !! streamTLS.CanWrite == false, disconnecting");
                         }
                     }
                 }
@@ -633,8 +567,8 @@ namespace Mozkomor.GrinGoldMiner
             }
             catch (Exception ex)
             {
-                Logger.Log(ex);
                 IsConnected = false;
+                Logger.Log(ex);
                 return false;
             }
         }
@@ -644,7 +578,12 @@ namespace Mozkomor.GrinGoldMiner
             try
             {
                 // difficulty check here
-                if (activeSolution.CheckDifficulty() && (CurrentJob != null && (ulong)currentHeight == activeSolution.job.height)) // && WaitForLoginConfirm == false)
+
+		if(activeSolution.job.height != CurrentJob.height)
+		{
+		    Logger.Log(LogLevel.WARNING, "stale solution");
+		}
+		else if (activeSolution.CheckDifficulty())
                 {
                     SubmitParams pow = new SubmitParams() { height = activeSolution.job.height, nonce = activeSolution.job.nonce, pow = activeSolution.nonces.ToList(), job_id = activeSolution.job.jobID };
                     StratumRpcRequest request = new StratumRpcRequest(StratumCommand.Solution);
@@ -664,10 +603,9 @@ namespace Mozkomor.GrinGoldMiner
                 else
                 {
                     // low difficulty share
-                    // or job changed
                 }
             }
-            catch (Exception ex) { Logger.Log(ex); }
+            catch(Exception ex) { Logger.Log(ex); }
         }
 
         /// <summary>
@@ -712,13 +650,9 @@ namespace Mozkomor.GrinGoldMiner
         {
             try
             {
-                StratumRpcRequest request;
-
-                {
-                    LoginParams lp = new LoginParams() { login = this.login, pass = this.password };
-                    request = new StratumRpcRequest(StratumCommand.Login);
-                    request.SetParams(lp);
-                }
+                LoginParams lp = new LoginParams() { login = this.login, pass = this.password };
+                StratumRpcRequest request = new StratumRpcRequest(StratumCommand.Login);
+                request.SetParams(lp);
 
                 if (GrinSend<StratumRpcRequest>(request))
                 {
@@ -752,15 +686,6 @@ namespace Mozkomor.GrinGoldMiner
         public override string ToString()
         {
             return $"{ip}:{port} IsConnected:{IsConnected} id:{id}";
-        }
-
-        private bool shouldPrint()
-        {
-#if PRINTFEE || DEBUG
-            return true;
-#else
-            return id == 1 || id == 2;
-#endif
         }
 
     }
@@ -810,15 +735,14 @@ namespace Mozkomor.GrinGoldMiner
         Keepalive
     }
 
-
-    /*
-let params_in = types::SubmitParams {
- height: height,
- job_id: job_id,
- edge_bits: edge_bits,
- nonce: nonce,
- pow: pow,
-};
-    */
-
+       /*
+   let params_in = types::SubmitParams {
+    height: height,
+    job_id: job_id,
+    edge_bits: edge_bits,
+    nonce: nonce,
+    pow: pow,
+   };
+       */
+   
 }
